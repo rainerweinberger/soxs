@@ -31,15 +31,6 @@ def read_simput_catalog(simput_file):
     return sc.sources, parameters
 
 
-def _e_from_models(prng, t_exp, area, spectral_model, spatial_model):
-    prng = parse_prng(prng)
-    t_exp = parse_value(t_exp, "s")
-    area = parse_value(area, "cm**2")
-    e = spectral_model.generate_energies(t_exp, area, prng=prng)
-    ra, dec = spatial_model.generate_coords(e.size, prng=prng)
-    return ra, dec, e
-
-
 class SimputCatalog(object):
 
     def __init__(self, sources, src_names, fluxes, emin, emax):
@@ -58,11 +49,10 @@ class SimputCatalog(object):
         self.emax = ensure_numpy_array(emax)
 
     @classmethod
-    def from_models(cls, src_name, spectral_model, spatial_model,
-                    t_exp, area, prng=None):
+    def from_models(cls, src_names, src_models, t_exp, area, prng=None):
         """
         Generate a SIMPUT catalog object and a single photon list
-        from a spectral and a spatial model. 
+        from a spectral and a spatial model.
 
         Parameters
         ----------
@@ -87,10 +77,18 @@ class SimputCatalog(object):
             which sets the seed based on the system time.
 
         """
-        ra, dec, e = _e_from_models(prng, t_exp, area, spectral_model, 
-                                    spatial_model)
-        photon_list = SimputPhotonList(src_name, ra, dec, e, e.flux)
-        return cls(photon_list, src_name, e.flux, e.min(), e.max())
+        src_names = ensure_list(src_names)
+        src_models = ensure_list(src_models)
+        sources = []
+        for i, src_name in enumerate(src_names):
+            src = SimputPhotonList.from_models(src_name, src_models[i][0], 
+                                               src_models[i][1], t_exp, 
+                                               area, prng=prng)
+            sources.append(src)
+        return cls(sources, src_names, 
+                   [src.flux for src in sources],
+                   [src.emin for src in sources], 
+                   [src.emax for src in sources])
 
     @classmethod
     def from_file(cls, filename):
@@ -127,8 +125,8 @@ class SimputCatalog(object):
                 ra = Quantity(data["ra"], "deg")
                 dec = Quantity(data["dec"], "deg")
                 energy = Quantity(data["energy"], "keV")
-                src = SimputPhotonList(src_names[i], ra, dec, energy,
-                                       fluxes[i])
+                src = SimputPhotonList(ra, dec, energy,
+                                       fluxes[i], name=src_names[i])
             sources.append(src)
 
         return cls(sources, src_names, fluxes, e_min, e_max)
@@ -337,9 +335,12 @@ class SimputPhotonList(SimputSource):
             set of random numbers, such as for a test. Default is None, 
             which sets the seed based on the system time. 
         """
-        ra, dec, e = _e_from_models(prng, t_exp, area, spectral_model,
-                                    spatial_model)
-        return cls(name, ra, dec, e, e.flux)
+        prng = parse_prng(prng)
+        t_exp = parse_value(t_exp, "s")
+        area = parse_value(area, "cm**2")
+        e = spectral_model.generate_energies(t_exp, area, prng=prng)
+        ra, dec = spatial_model.generate_coords(e.size, prng=prng)
+        return cls(ra, dec, e, e.flux.value, name=name)
 
     def write_source(self, filename, append=False, overwrite=False):
         """
