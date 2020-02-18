@@ -151,6 +151,7 @@ class SimputCatalog(object):
         flx = []
         spectrum = []
         image = []
+        timing = []
         src_name = []
 
         extver = defaultdict(int)
@@ -170,7 +171,8 @@ class SimputCatalog(object):
             extver[src.src_type] += 1
             spec = "[{},{}]".format(src.src_type.upper(), extver[src.src_type])
             spectrum.append(spec)
-            image.append(spec)
+            image.append("NULL")
+            timing.append("NULL")
 
         src_id = np.array(src_id).astype("int32")
 
@@ -182,9 +184,10 @@ class SimputCatalog(object):
         col6 = pyfits.Column(name='FLUX', format='D', array=flx)
         col7 = pyfits.Column(name='SPECTRUM', format='80A', array=spectrum)
         col8 = pyfits.Column(name='IMAGE', format='80A', array=image)
-        col9 = pyfits.Column(name='SRC_NAME', format='80A', array=src_name)
+        col9 = pyfits.Column(name='TIMING', format='80A', array=timing)
+        col10 = pyfits.Column(name='SRC_NAME', format='80A', array=src_name)
 
-        coldefs = pyfits.ColDefs([col1, col2, col3, col4, col5, col6, col7, col8, col9])
+        coldefs = pyfits.ColDefs([col1, col2, col3, col4, col5, col6, col7, col8, col9, col10])
 
         wrhdu = pyfits.BinTableHDU.from_columns(coldefs)
         wrhdu.name = "SRC_CAT"
@@ -258,10 +261,10 @@ class SimputSource(object):
         tbhdu = pyfits.BinTableHDU.from_columns(coldefs)
         tbhdu.name = self.src_type.upper()
 
+        hduclas1 = "PHOTONS" if self.src_type == "phlist" else self.src_type.upper()
         tbhdu.header["HDUCLASS"] = "HEASARC/SIMPUT"
-        tbhdu.header["HDUCLAS1"] = self.src_type.upper()
+        tbhdu.header["HDUCLAS1"] = hduclas1
         tbhdu.header["HDUVERS"] = "1.1.0"
-        tbhdu.header["EXTVER"] = 1
         tbhdu.header["REFRA"] = 0.0
         tbhdu.header["REFDEC"] = 0.0
         tbhdu.header["TUNIT1"] = "keV"
