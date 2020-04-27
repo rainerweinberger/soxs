@@ -563,6 +563,7 @@ def write_radial_profile(evt_file, out_file, ctr, rmin,
 
     hdulist.writeto(out_file, overwrite=overwrite)
 
+
 coord_types = {"sky": ("X", "Y", 2, 3),
                "det": ("DETX", "DETY", 6, 7)}
 
