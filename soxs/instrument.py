@@ -89,6 +89,7 @@ class AuxiliaryResponseFile(object):
         return u.Quantity(earea, "cm**2")
 
     def generate_events(self, src, exp_time, refband, prng=None):
+        from soxs.spectra import ConvolvedSpectrum
         prng = parse_prng(prng)
         cspec = ConvolvedSpectrum(src.spec, self).new_spec_from_band(refband[0], refband[1])
         energy = cspec.generate_energies(exp_time, quiet=True, prng=prng)
@@ -118,7 +119,7 @@ class AuxiliaryResponseFile(object):
             which sets the seed based on the system time. 
         """
         prng = parse_prng(prng)
-        energy = events["energy"].value
+        energy = np.asarray(events["energy"])
         if energy.size == 0:
             return events
         earea = self.interpolate_area(energy).value
